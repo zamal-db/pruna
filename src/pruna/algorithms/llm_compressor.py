@@ -71,10 +71,10 @@ class LLMCompressor(PrunaAlgorithmBase):
                 meta=dict(desc="Quantization scheme to use. Use symmetric quantization to avoid decompression issues."),
             ),
             CategoricalHyperparameter(
-                "calibration_pipeline", 
+                "calibration_pipeline",
                 choices=["independent", "basic", "datafree", "sequential", "layer_sequential"],
                 default_value="independent",
-                meta=dict(desc="Pipeline to use for calibration.")
+                meta=dict(desc="Pipeline to use for calibration."),
             ),
             TargetModules(
                 "target_modules",
@@ -151,6 +151,8 @@ class LLMCompressor(PrunaAlgorithmBase):
             defaults = self.get_model_dependent_hyperparameter_defaults(model, smash_config)
             target_modules = cast(TARGET_MODULES_TYPE, defaults["target_modules"])
 
+        calibration_pipeline = smash_config["calibration_pipeline"]
+
         def quantize_language_model(
             attr_name: str | None, language_model: torch.nn.Module, subpaths: list[str]
         ) -> torch.nn.Module:
@@ -179,7 +181,9 @@ class LLMCompressor(PrunaAlgorithmBase):
                     targets=["Linear"],
                 )
             ]
-            return imported["oneshot"](model=language_model, recipe=recipe, dataset=dataset, processor=processor)
+            return imported["oneshot"](
+                model=language_model, recipe=recipe, dataset=dataset, processor=processor, pipeline=calibration_pipeline
+            )
 
         model = map_targeted_nn_roots(quantize_language_model, model, target_modules)
         return model
