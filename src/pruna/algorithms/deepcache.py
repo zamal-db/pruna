@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from collections.abc import Iterable
-from typing import Any, Dict, Hashable, Mapping, cast
+from typing import Any, Dict
 
 from ConfigSpace import OrdinalHyperparameter
 
@@ -50,7 +50,7 @@ class DeepCache(PrunaAlgorithmBase):
         "diffusers_int8",
         "quanto",
         "sage_attn",
-        ]
+    ]
     compatible_after: Iterable[str] = ["stable_fast", "torch_compile"]
 
     def get_hyperparameters(self) -> list:
@@ -67,10 +67,9 @@ class DeepCache(PrunaAlgorithmBase):
                 "interval",
                 sequence=[1, 2, 3, 4, 5],
                 default_value=2,
-                meta=cast(
-                    Mapping[Hashable, Any],
-                    dict(desc="Interval at which to cache - 1 disables caching. Higher is faster but might affect quality."),
-                ),
+                meta={
+                    "desc": "Interval at which to cache - 1 disables caching. Higher is faster but might affect quality."
+                },
             ),
         ]
 
