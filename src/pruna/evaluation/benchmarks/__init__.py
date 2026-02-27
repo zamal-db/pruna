@@ -72,9 +72,9 @@ class BenchmarkRegistry:
         Benchmark(
             name="Parti Prompts",
             description=(
-                "Over 1,600 diverse English prompts across 12 categories with 11 challenge aspects "
-                "ranging from basic to complex, enabling comprehensive assessment of model capabilities "
-                "across different domains and difficulty levels."
+                "Holistic benchmark from Google Research with over 1,600 English prompts across 12 categories "
+                "and 11 challenge aspects. Evaluates text-to-image models on abstract thinking, world knowledge, "
+                "perspectives, and symbol rendering from basic to complex compositions."
             ),
             metrics=[
                 "arniqa",
@@ -86,7 +86,10 @@ class BenchmarkRegistry:
         ),
         Benchmark(
             name="DrawBench",
-            description="A comprehensive benchmark for evaluating text-to-image generation models.",
+            description=(
+                "Comprehensive benchmark from the Imagen team for rigorous evaluation of text-to-image models. "
+                "Enables side-by-side comparison on sample quality and image-text alignment with human raters."
+            ),
             metrics=[
                 "clip_score",
                 "clipiqa",
@@ -97,7 +100,11 @@ class BenchmarkRegistry:
         ),
         Benchmark(
             name="GenAI Bench",
-            description="A benchmark for evaluating generative AI models.",
+            description=(
+                "1,600 prompts from professional designers for compositional text-to-visual generation. "
+                "Covers basic skills (scene, attributes, spatial relationships) to advanced reasoning "
+                "(counting, comparison, logic/negation) with over 24k human ratings."
+            ),
             metrics=[
                 "clip_score",
                 "clipiqa",
@@ -108,25 +115,38 @@ class BenchmarkRegistry:
         ),
         Benchmark(
             name="VBench",
-            description="A benchmark for evaluating video generation models.",
+            description=(
+                "Comprehensive benchmark suite for video generative models. Decomposes video quality into "
+                "16 disentangled dimensions: temporal flickering, motion smoothness, subject consistency, "
+                "spatial relationship, color, aesthetic quality, and more."
+            ),
             metrics=["clip_score"],
             task_type="text_to_video",
         ),
         Benchmark(
             name="COCO",
-            description="Microsoft COCO dataset for image generation evaluation with real image-caption pairs.",
+            description=(
+                "Microsoft COCO dataset for image generation evaluation. Real image-caption pairs "
+                "enabling FID and alignment metrics on distribution-level and instance-level quality."
+            ),
             metrics=["fid", "clip_score", "clipiqa"],
             task_type="text_to_image",
         ),
         Benchmark(
             name="ImageNet",
-            description="Large-scale image classification benchmark with 1000 classes.",
+            description=(
+                "Large-scale image classification benchmark with 1,000 classes. Standard evaluation "
+                "for vision model accuracy on object recognition."
+            ),
             metrics=["accuracy"],
             task_type="image_classification",
         ),
         Benchmark(
             name="WikiText",
-            description="Language modeling benchmark based on Wikipedia articles.",
+            description=(
+                "Language modeling benchmark based on Wikipedia articles. Standard evaluation "
+                "for text generation quality via perplexity."
+            ),
             metrics=["perplexity"],
             task_type="text_generation",
         ),

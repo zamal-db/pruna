@@ -154,9 +154,9 @@ benchmark_info: dict[str, Benchmark] = {
         name="parti_prompts",
         display_name="Parti Prompts",
         description=(
-            "Over 1,600 diverse English prompts across 12 categories with 11 challenge aspects "
-            "ranging from basic to complex, enabling comprehensive assessment of model capabilities "
-            "across different domains and difficulty levels."
+            "Holistic benchmark from Google Research with over 1,600 English prompts across 12 categories "
+            "and 11 challenge aspects. Evaluates text-to-image models on abstract thinking, world knowledge, "
+            "perspectives, and symbol rendering from basic to complex compositions."
         ),
         metrics=["arniqa", "clip_score", "clipiqa", "sharpness"],
         task_type="text_to_image",
@@ -164,7 +164,10 @@ benchmark_info: dict[str, Benchmark] = {
     "DrawBench": Benchmark(
         name="drawbench",
         display_name="DrawBench",
-        description="A comprehensive benchmark for evaluating text-to-image generation models.",
+        description=(
+            "Comprehensive benchmark from the Imagen team for rigorous evaluation of text-to-image models. "
+            "Enables side-by-side comparison on sample quality and image-text alignment with human raters."
+        ),
         metrics=[
             "clip_score",
             "clipiqa",
@@ -176,7 +179,11 @@ benchmark_info: dict[str, Benchmark] = {
     "GenAIBench": Benchmark(
         name="genai_bench",
         display_name="GenAI Bench",
-        description="A benchmark for evaluating generative AI models.",
+        description=(
+            "1,600 prompts from professional designers for compositional text-to-visual generation. "
+            "Covers basic skills (scene, attributes, spatial relationships) to advanced reasoning "
+            "(counting, comparison, logic/negation) with over 24k human ratings."
+        ),
         metrics=[
             "clip_score",
             "clipiqa",
@@ -188,7 +195,11 @@ benchmark_info: dict[str, Benchmark] = {
     "VBench": Benchmark(
         name="vbench",
         display_name="VBench",
-        description="A benchmark for evaluating video generation models.",
+        description=(
+            "Comprehensive benchmark suite for video generative models. Decomposes video quality into "
+            "16 disentangled dimensions: temporal flickering, motion smoothness, subject consistency, "
+            "spatial relationship, color, aesthetic quality, and more."
+        ),
         metrics=["clip_score"],
         task_type="text_to_video",
     ),
@@ -196,8 +207,9 @@ benchmark_info: dict[str, Benchmark] = {
         name="geneval",
         display_name="GenEval",
         description=(
-            "Fine-grained compositional evaluation across object co-occurrence, positioning, "
-            "counting, and color binding to identify specific failure modes in text-to-image alignment."
+            "Object-focused framework (NeurIPS 2023) for fine-grained text-to-image alignment. "
+            "Evaluates compositional properties: object co-occurrence, position, count, and color binding "
+            "via instance-level analysis rather than distribution-level metrics."
         ),
         metrics=[
             # "qa_accuracy" not supported in Pruna
@@ -208,8 +220,9 @@ benchmark_info: dict[str, Benchmark] = {
         name="hps",
         display_name="HPS",
         description=(
-            "Large-scale human preference annotations with 798k pairwise comparisons across "
-            "multiple generative model outputs to align evaluation with actual human preferences."
+            "Human Preference Score v2: large-scale benchmark with 798k human preference choices on "
+            "433k image pairs. CLIP fine-tuned on HPD v2 to predict human preferences and align "
+            "evaluation with actual human judgment across diverse generative outputs."
         ),
         metrics=[
             # "hps" not supported in Pruna
@@ -220,7 +233,7 @@ benchmark_info: dict[str, Benchmark] = {
         name="long_text_bench",
         display_name="Long Text Bench",
         description=(
-            "Extended detail-rich prompts averaging 284.89 tokens with evaluation dimensions of "
+            "DetailMaster benchmark with prompts averaging 284.89 tokens. Evaluates four dimensions: "
             "character attributes, structured locations, scene attributes, and spatial relationships "
             "to test compositional reasoning under long prompt complexity."
         ),
@@ -232,7 +245,11 @@ benchmark_info: dict[str, Benchmark] = {
     "ImgEdit": Benchmark(
         name="imgedit",
         display_name="ImgEdit",
-        description="Image editing benchmark with 8 edit types for evaluating editing capabilities.",
+        description=(
+            "Unified image editing benchmark (PKU-YuanGroup) with 8 edit types: replace, add, remove, "
+            "adjust, extract, style, background, compose. Evaluates instruction adherence, editing "
+            "quality, and detail preservation."
+        ),
         metrics=[
             # "img_edit_score" not supported in Pruna
         ],
@@ -241,7 +258,11 @@ benchmark_info: dict[str, Benchmark] = {
     "GEditBench": Benchmark(
         name="gedit_bench",
         display_name="GEdit Bench",
-        description="Image editing benchmark with 11 task types for evaluating fine-grained editing capabilities.",
+        description=(
+            "StepFun benchmark grounded in real-world user instructions. 11 task types including "
+            "background_change, subject_add/remove/replace, style_change, and tone_transfer for "
+            "practical evaluation of image editing capabilities."
+        ),
         metrics=[
             # "viescore" not supported in Pruna
         ],
@@ -251,9 +272,9 @@ benchmark_info: dict[str, Benchmark] = {
         name="oneig",
         display_name="OneIG",
         description=(
-            "Comprehensive benchmark for text rendering and image-text alignment "
-            "evaluation across anime, portrait, and object generation. Categories: "
-            "Text_Rendering, Anime_Stylization, Portrait, General_Object, Knowledge_Reasoning, Multilingualism."
+            "Omni-dimensional benchmark (NeurIPS 2025) for nuanced image generation evaluation. "
+            "Six categories: Text_Rendering, Anime_Stylization, Portrait, General_Object, "
+            "Knowledge_Reasoning, Multilingualism. Addresses text rendering precision and prompt-image alignment."
         ),
         metrics=[
             # "alignment_score", "text_score" not supported in Pruna
@@ -264,8 +285,9 @@ benchmark_info: dict[str, Benchmark] = {
         name="dpg",
         display_name="DPG",
         description=(
-            "Descriptive Prompt Generation benchmark for evaluating image understanding "
-            "across entity, attribute, relation, and global aspects."
+            "Dense Prompt Graph benchmark from ELLA/Tencent. ~1,000 complex prompts testing "
+            "entity, attribute, relation, and global aspects. Evaluates models on dense prompt "
+            "following with multiple objects and varied attributes."
         ),
         metrics=[
             # "qa_accuracy" not supported in Pruna
@@ -275,21 +297,30 @@ benchmark_info: dict[str, Benchmark] = {
     "COCO": Benchmark(
         name="coco",
         display_name="COCO",
-        description="Microsoft COCO dataset for image generation evaluation with real image-caption pairs.",
+        description=(
+            "Microsoft COCO dataset for image generation evaluation. Real image-caption pairs "
+            "enabling FID and alignment metrics on distribution-level and instance-level quality."
+        ),
         metrics=["fid", "clip_score", "clipiqa"],
         task_type="text_to_image",
     ),
     "ImageNet": Benchmark(
         name="imagenet",
         display_name="ImageNet",
-        description="Large-scale image classification benchmark with 1000 classes.",
+        description=(
+            "Large-scale image classification benchmark with 1,000 classes. Standard evaluation "
+            "for vision model accuracy on object recognition."
+        ),
         metrics=["accuracy"],
         task_type="image_classification",
     ),
     "WikiText": Benchmark(
         name="wikitext",
         display_name="WikiText",
-        description="Language modeling benchmark based on Wikipedia articles.",
+        description=(
+            "Language modeling benchmark based on Wikipedia articles. Standard evaluation "
+            "for text generation quality via perplexity."
+        ),
         metrics=["perplexity"],
         task_type="text_generation",
     ),
