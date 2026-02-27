@@ -29,6 +29,7 @@ from pruna.data.datasets.image import (
 from pruna.data.datasets.prompt import (
     setup_dpg_dataset,
     setup_drawbench_dataset,
+    setup_gedit_dataset,
     setup_genai_bench_dataset,
     setup_geneval_dataset,
     setup_hps_dataset,
@@ -62,6 +63,7 @@ BENCHMARK_CATEGORY_CONFIG: dict[str, tuple[str, list[str]]] = {
     "GenEval": ("counting", ["tag"]),
     "HPS": ("anime", ["category"]),
     "ImgEdit": ("replace", ["category"]),
+    "GEditBench": ("background_change", ["category"]),
     "OneIG": ("Text_Rendering", ["subset", "category"]),
     "DPG": ("entity", ["category_broad"]),
     "OneIGAlignment": ("Portrait", ["category"]),
@@ -126,6 +128,7 @@ base_datasets: dict[str, Tuple[Callable, str, dict[str, Any]]] = {
     "HPS": (setup_hps_dataset, "prompt_with_auxiliaries_collate", {}),
     "ImgEdit": (setup_imgedit_dataset, "prompt_with_auxiliaries_collate", {}),
     "LongTextBench": (setup_long_text_bench_dataset, "prompt_with_auxiliaries_collate", {}),
+    "GEditBench": (setup_gedit_dataset, "prompt_with_auxiliaries_collate", {}),
     "OneIG": (setup_oneig_dataset, "prompt_with_auxiliaries_collate", {}),
     "OneIGTextRendering": (setup_oneig_text_rendering_dataset, "prompt_with_auxiliaries_collate", {}),
     "OneIGAlignment": (setup_oneig_alignment_dataset, "prompt_with_auxiliaries_collate", {}),
@@ -280,6 +283,28 @@ benchmark_info: dict[str, BenchmarkInfo] = {
         ],
         task_type="image_edit",
         subsets=["replace", "add", "remove", "adjust", "extract", "style", "background", "compose"],
+    ),
+    "GEditBench": BenchmarkInfo(
+        name="gedit_bench",
+        display_name="GEdit Bench",
+        description="Image editing benchmark with 11 task types for evaluating fine-grained editing capabilities.",
+        metrics=[
+            # "viescore" not supported in Pruna
+        ],
+        task_type="image_edit",
+        subsets=[
+            "background_change",
+            "color_alter",
+            "material_alter",
+            "motion_change",
+            "ps_human",
+            "style_change",
+            "subject_add",
+            "subject_remove",
+            "subject_replace",
+            "text_change",
+            "tone_transfer",
+        ],
     ),
     "OneIG": BenchmarkInfo(
         name="oneig",

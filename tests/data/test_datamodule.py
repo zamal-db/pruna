@@ -49,6 +49,7 @@ def iterate_dataloaders(datamodule: PrunaDataModule) -> None:
         pytest.param("HPS", dict(), marks=pytest.mark.slow),
         pytest.param("ImgEdit", dict(), marks=pytest.mark.slow),
         pytest.param("LongTextBench", dict(), marks=pytest.mark.slow),
+        pytest.param("GEditBench", dict(), marks=pytest.mark.slow),
         pytest.param("OneIG", dict(), marks=pytest.mark.slow),
         pytest.param("OneIGTextRendering", dict(), marks=pytest.mark.slow),
         pytest.param("OneIGAlignment", dict(), marks=pytest.mark.slow),

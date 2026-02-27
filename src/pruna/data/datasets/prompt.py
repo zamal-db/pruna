@@ -478,7 +478,6 @@ def _load_oneig_alignment(seed: int, category: str | None = None, class_filter: 
     questions_by_id: dict[str, dict] = {}
     url = "https://raw.githubusercontent.com/OneIG-Bench/OneIG-Benchmark/main/benchmark/alignment_questions.json"
     response = requests.get(url)
-    questions_by_id: dict[str, dict] = {}
     if response.status_code == 200:
         try:
             questions_data = json.loads(response.text)
@@ -666,6 +665,88 @@ def setup_oneig_alignment_dataset(
     n = define_sample_size_for_dataset(ds, fraction, test_sample_size)
     ds = ds.select(range(min(n, len(ds))))
     return _prepare_test_only_prompt_dataset(ds, seed, "OneIGAlignment")
+
+
+GEditBenchCategory = Literal[
+    "background_change",
+    "color_alter",
+    "material_alter",
+    "motion_change",
+    "ps_human",
+    "style_change",
+    "subject_add",
+    "subject_remove",
+    "subject_replace",
+    "text_change",
+    "tone_transfer",
+]
+
+
+def setup_gedit_dataset(
+    seed: int,
+    fraction: float = 1.0,
+    train_sample_size: int | None = None,
+    test_sample_size: int | None = None,
+    category: GEditBenchCategory | list[GEditBenchCategory] | None = None,
+) -> Tuple[Dataset, Dataset, Dataset]:
+    """
+    Setup the GEditBench dataset for image editing evaluation.
+
+    License: Apache 2.0
+
+    Parameters
+    ----------
+    seed : int
+        The seed to use.
+    fraction : float
+        The fraction of the dataset to use.
+    train_sample_size : int | None
+        Unused; train/val are dummy.
+    test_sample_size : int | None
+        The sample size to use for the test dataset.
+    category : GEditBenchCategory | list[GEditBenchCategory] | None
+        Filter by task type. Available: background_change, color_alter, material_alter,
+        motion_change, ps_human, style_change, subject_add, subject_remove, subject_replace,
+        text_change, tone_transfer. If None, returns all categories.
+
+    Returns
+    -------
+    Tuple[Dataset, Dataset, Dataset]
+        The GEditBench dataset (dummy train, dummy val, test).
+    """
+    task_type_map = {
+        "subject_add": "subject-add",
+        "subject_remove": "subject-remove",
+        "subject_replace": "subject-replace",
+    }
+
+    ds = load_dataset("stepfun-ai/GEdit-Bench")["train"]  # type: ignore[index]
+    ds = ds.filter(lambda x: x["instruction_language"] == "en")
+
+    categories = [category] if category is not None and not isinstance(category, list) else category
+    if categories is not None:
+        hf_types = [task_type_map.get(c, c) for c in categories]
+        ds = ds.filter(lambda x: x["task_type"] in hf_types)
+
+    records = []
+    for row in ds:
+        task_type = row.get("task_type", "")
+        category_name = {v: k for k, v in task_type_map.items()}.get(task_type, task_type)
+        records.append(
+            {
+                "text": row.get("instruction", ""),
+                "category": category_name,
+            }
+        )
+
+    ds = Dataset.from_list(records)
+    test_sample_size = define_sample_size_for_dataset(ds, fraction, test_sample_size)
+    ds = ds.select(range(min(test_sample_size, len(ds))))
+
+    if len(ds) == 0:
+        raise ValueError(f"No samples found for category '{category}'.")
+
+    return _prepare_test_only_prompt_dataset(ds, seed, "GEditBench")
 
 
 DPGCategory = Literal["entity", "attribute", "relation", "global", "other"]
