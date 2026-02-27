@@ -123,9 +123,14 @@ GEditBenchCategory = Literal[
 ]
 DPGCategory = Literal["entity", "attribute", "relation", "global", "other"]
 
-ONEIG_DATASET_CATEGORIES = frozenset(
-    {"Anime_Stylization", "General_Object", "Knowledge_Reasoning", "Multilingualism", "Portrait", "Text_Rendering"}
-)
+ONEIG_DATASET_CATEGORIES = Literal[
+    "Anime_Stylization",
+    "General_Object",
+    "Knowledge_Reasoning",
+    "Multilingualism",
+    "Portrait",
+    "Text_Rendering",
+]
 
 
 def setup_drawbench_dataset(seed: int) -> Tuple[Dataset, Dataset, Dataset]:
@@ -510,7 +515,8 @@ def _load_oneig_alignment(seed: int, category: str | None = None, class_filter: 
         except json.JSONDecodeError:
             pass
 
-    alignment_cats = ONEIG_DATASET_CATEGORIES - {"Knowledge_Reasoning", "Multilingualism", "Text_Rendering"}
+    exclude = {"Knowledge_Reasoning", "Multilingualism", "Text_Rendering"}
+    alignment_cats = frozenset(get_args(ONEIG_DATASET_CATEGORIES)) - exclude
     records = []
     for row in ds:
         row_id = row.get("id", "")
@@ -616,7 +622,7 @@ def setup_oneig_dataset(
     category_filter: str | None = None
     class_filter: str | None = None
 
-    if single_filter in ONEIG_DATASET_CATEGORIES:
+    if single_filter in get_args(ONEIG_DATASET_CATEGORIES):
         category_filter = single_filter
     elif single_filter is not None:
         class_filter = single_filter
