@@ -81,8 +81,6 @@ OneIGCategory = Literal[
     "vivid warm",
     "watercolor",
 ]
-ONEIG_DATASET_CATEGORIES = frozenset(get_args(OneIGCategory)[:6])
-
 PartiCategory = Literal[
     "Abstract",
     "Animals",
