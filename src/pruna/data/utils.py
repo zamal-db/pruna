@@ -268,16 +268,16 @@ def _prepare_test_only_prompt_dataset(
     dataset_name: str,
 ) -> Tuple[Dataset, Dataset, Dataset]:
     """
-    Shared tail for test-only prompt datasets: shuffle, return dummy train/val + test.
+    Shared tail for test-only prompt datasets: return dummy train/val + test.
 
-    All benchmark datasets use this.
+    All benchmark datasets use this. Test datasets are not shuffled.
 
     Parameters
     ----------
     ds : Dataset
         The dataset to prepare.
     seed : int
-        The seed for shuffling.
+        Unused; kept for API compatibility.
     dataset_name : str
         Name for logging.
 
@@ -286,7 +286,6 @@ def _prepare_test_only_prompt_dataset(
     Tuple[Dataset, Dataset, Dataset]
         Dummy train, dummy val, and test datasets.
     """
-    ds = ds.shuffle(seed=seed)
     pruna_logger.info(f"{dataset_name} is a test-only dataset. Do not use it for training or validation.")
     return ds.select([0]), ds.select([0]), ds
 

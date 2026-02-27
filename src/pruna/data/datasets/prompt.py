@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import contextlib
 from typing import Literal, Tuple, get_args
 
 from datasets import Dataset, load_dataset
@@ -122,6 +123,10 @@ GEditBenchCategory = Literal[
 ]
 DPGCategory = Literal["entity", "attribute", "relation", "global", "other"]
 
+ONEIG_DATASET_CATEGORIES = frozenset(
+    {"Anime_Stylization", "General_Object", "Knowledge_Reasoning", "Multilingualism", "Portrait", "Text_Rendering"}
+)
+
 
 def setup_drawbench_dataset(seed: int) -> Tuple[Dataset, Dataset, Dataset]:
     """
@@ -177,7 +182,9 @@ def setup_parti_prompts_dataset(
     """
     ds = load_dataset("nateraw/parti-prompts")["train"]  # type: ignore[index]
 
-    if category is not None:
+    if category is None:
+        pass
+    else:
         categories = [category] if not isinstance(category, list) else category
         ds = ds.filter(lambda x: x["Category"] in categories or x["Challenge"] in categories)
 
@@ -419,8 +426,16 @@ def setup_imgedit_dataset(
     instructions_url = "https://raw.githubusercontent.com/PKU-YuanGroup/ImgEdit/b3eb8e74d7cd1fd0ce5341eaf9254744a8ab4c0b/Benchmark/Basic/basic_edit.json"
     judge_prompts_url = "https://raw.githubusercontent.com/PKU-YuanGroup/ImgEdit/c14480ac5e7b622e08cd8c46f96624a48eb9ab46/Benchmark/Basic/prompts.json"
 
-    instructions = json.loads(requests.get(instructions_url).text)
-    judge_prompts = json.loads(requests.get(judge_prompts_url).text)
+    resp_inst = requests.get(instructions_url)
+    resp_judge = requests.get(judge_prompts_url)
+    instructions: dict = {}
+    if resp_inst.status_code == 200:
+        with contextlib.suppress(json.JSONDecodeError):
+            instructions = json.loads(resp_inst.text)
+    judge_prompts: dict = {}
+    if resp_judge.status_code == 200:
+        with contextlib.suppress(json.JSONDecodeError):
+            judge_prompts = json.loads(resp_judge.text)
 
     categories = [category] if category is not None and not isinstance(category, list) else category
     records = []
@@ -495,7 +510,7 @@ def _load_oneig_alignment(seed: int, category: str | None = None, class_filter: 
         except json.JSONDecodeError:
             pass
 
-    alignment_cats = {"Anime_Stylization", "Portrait", "General_Object"}
+    alignment_cats = ONEIG_DATASET_CATEGORIES - {"Knowledge_Reasoning", "Multilingualism", "Text_Rendering"}
     records = []
     for row in ds:
         row_id = row.get("id", "")
@@ -525,11 +540,6 @@ def _load_oneig_alignment(seed: int, category: str | None = None, class_filter: 
     return Dataset.from_list(records).shuffle(seed=seed)
 
 
-ONEIG_DATASET_CATEGORIES = frozenset(
-    {"Anime_Stylization", "General_Object", "Knowledge_Reasoning", "Multilingualism", "Portrait", "Text_Rendering"}
-)
-
-
 def _load_oneig_generic(
     seed: int,
     category_filter: str | None = None,
@@ -537,9 +547,7 @@ def _load_oneig_generic(
     config: str = "OneIG-Bench",
 ) -> Dataset:
     """Load OneIG data for Knowledge_Reasoning, Multilingualism, or any category without alignment questions."""
-    ds = load_dataset("OneIG-Bench/OneIG-Bench", config)[  # type: ignore[index]
-        "train"
-    ]
+    ds = load_dataset("OneIG-Bench/OneIG-Bench", config)["train"]  # type: ignore[index]
 
     records = []
     for row in ds:
