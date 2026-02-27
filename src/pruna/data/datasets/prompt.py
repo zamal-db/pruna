@@ -797,9 +797,8 @@ def setup_dpg_dataset(
     for row in reader:
         row_category = row.get("category_broad", row.get("category", ""))
 
-        if categories is not None:
-            if row_category not in categories:
-                continue
+        if categories is not None and row_category not in categories:
+            continue
 
         key = (row.get("text", ""), row_category)
         q = row.get("question_natural_language", "")
