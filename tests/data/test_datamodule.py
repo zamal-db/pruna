@@ -111,31 +111,22 @@ def test_benchmark_category_filter(dataset_name: str, category: str) -> None:
     assert all(any(aux.get(k) == category for k in aux_keys) for aux in auxiliaries)
 
 
+@pytest.mark.cpu
 @pytest.mark.slow
-def test_long_text_bench_auxiliaries() -> None:
-    """Test LongTextBench loading with auxiliaries."""
-    dm = PrunaDataModule.from_string(
-        "LongTextBench", dataloader_args={"batch_size": 4}
-    )
+@pytest.mark.parametrize(
+    "dataset_name, required_aux_key",
+    [
+        ("LongTextBench", "text_content"),
+        ("OneIGTextRendering", "text_content"),
+    ],
+)
+def test_prompt_benchmark_auxiliaries(dataset_name: str, required_aux_key: str) -> None:
+    """Test prompt-based benchmarks load with expected auxiliaries."""
+    dm = PrunaDataModule.from_string(dataset_name, dataloader_args={"batch_size": 4})
     dm.limit_datasets(10)
     batch = next(iter(dm.test_dataloader()))
     prompts, auxiliaries = batch
 
     assert len(prompts) == 4
     assert all(isinstance(p, str) for p in prompts)
-    assert all("text_content" in aux for aux in auxiliaries)
-
-
-@pytest.mark.slow
-def test_oneig_text_rendering_auxiliaries() -> None:
-    """Test OneIGTextRendering loading with auxiliaries."""
-    dm = PrunaDataModule.from_string(
-        "OneIGTextRendering", dataloader_args={"batch_size": 4}
-    )
-    dm.limit_datasets(10)
-    batch = next(iter(dm.test_dataloader()))
-    prompts, auxiliaries = batch
-
-    assert len(prompts) == 4
-    assert all(isinstance(p, str) for p in prompts)
-    assert all("text_content" in aux for aux in auxiliaries)
+    assert all(required_aux_key in aux for aux in auxiliaries)

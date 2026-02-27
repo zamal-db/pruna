@@ -646,7 +646,27 @@ def setup_oneig_text_rendering_dataset(
     train_sample_size: int | None = None,
     test_sample_size: int | None = None,
 ) -> Tuple[Dataset, Dataset, Dataset]:
-    """Setup OneIG Text Rendering benchmark (subset of OneIG)."""
+    """
+    Setup OneIG Text Rendering benchmark (subset of OneIG).
+
+    License: Apache 2.0
+
+    Parameters
+    ----------
+    seed : int
+        The seed to use.
+    fraction : float
+        The fraction of the dataset to use.
+    train_sample_size : int | None
+        Unused; train/val are dummy.
+    test_sample_size : int | None
+        The sample size to use for the test dataset.
+
+    Returns
+    -------
+    Tuple[Dataset, Dataset, Dataset]
+        The OneIG Text Rendering dataset (dummy train, dummy val, test).
+    """
     ds = _load_oneig_text_rendering(seed, None)
     n = define_sample_size_for_dataset(ds, fraction, test_sample_size)
     ds = ds.select(range(min(n, len(ds))))
@@ -660,7 +680,29 @@ def setup_oneig_alignment_dataset(
     test_sample_size: int | None = None,
     category: str | None = None,
 ) -> Tuple[Dataset, Dataset, Dataset]:
-    """Setup OneIG Alignment benchmark (subset of OneIG)."""
+    """
+    Setup OneIG Alignment benchmark (subset of OneIG).
+
+    License: Apache 2.0
+
+    Parameters
+    ----------
+    seed : int
+        The seed to use.
+    fraction : float
+        The fraction of the dataset to use.
+    train_sample_size : int | None
+        Unused; train/val are dummy.
+    test_sample_size : int | None
+        The sample size to use for the test dataset.
+    category : str | None
+        Filter by category. Available: Anime_Stylization, Portrait, General_Object.
+
+    Returns
+    -------
+    Tuple[Dataset, Dataset, Dataset]
+        The OneIG Alignment dataset (dummy train, dummy val, test).
+    """
     ds = _load_oneig_alignment(seed, category=category, class_filter=None)
     n = define_sample_size_for_dataset(ds, fraction, test_sample_size)
     ds = ds.select(range(min(n, len(ds))))
