@@ -12,12 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import contextlib
 from typing import Literal, Tuple, get_args
 
 from datasets import Dataset, load_dataset
 
-from pruna.data.utils import _prepare_test_only_prompt_dataset, define_sample_size_for_dataset
+from pruna.data.utils import define_sample_size_for_dataset
 from pruna.logging.logger import pruna_logger
 
 GenEvalCategory = Literal["single_object", "two_object", "counting", "colors", "position", "color_attr"]
@@ -123,14 +122,43 @@ GEditBenchCategory = Literal[
 ]
 DPGCategory = Literal["entity", "attribute", "relation", "global", "other"]
 
-ONEIG_DATASET_CATEGORIES = Literal[
-    "Anime_Stylization",
-    "General_Object",
-    "Knowledge_Reasoning",
-    "Multilingualism",
-    "Portrait",
-    "Text_Rendering",
-]
+
+def _to_oneig_record(row: dict, questions_by_id: dict[str, dict]) -> dict:
+    """Convert OneIG row to unified record format."""
+    row_category = row.get("category", "")
+    row_class = row.get("class", "None") or "None"
+    q_info = questions_by_id.get(row.get("id", ""), {})
+    return {
+        "text": row.get("prompt_en", row.get("prompt", "")),
+        "subset": "Text_Rendering" if row_category in ("Text_Rendering", "Text Rendering") else row_category,
+        "text_content": row_class if row_class != "None" else None,
+        "category": row_category,
+        "class": row_class,
+        "questions": q_info.get("questions", []),
+        "dependencies": q_info.get("dependencies", []),
+    }
+
+
+def _load_oneig_all(seed: int) -> Dataset:
+    """Load full OneIG dataset from HuggingFace and GitHub."""
+    import json
+
+    import requests
+    from datasets import concatenate_datasets
+
+    resp = requests.get(
+        "https://raw.githubusercontent.com/OneIG-Bench/OneIG-Benchmark/main/benchmark/alignment_questions.json"
+    )
+    resp.raise_for_status()
+    questions_by_id = {q["id"]: q for q in json.loads(resp.text)}
+
+    ds_main = load_dataset("OneIG-Bench/OneIG-Bench", "OneIG-Bench")["train"]  # type: ignore[index]
+    ds_zh = load_dataset("OneIG-Bench/OneIG-Bench", "OneIG-Bench-ZH")["train"]  # type: ignore[index]
+    ds = concatenate_datasets([ds_main, ds_zh])
+
+    records = [_to_oneig_record(dict(row), questions_by_id) for row in ds]
+
+    return Dataset.from_list(records).shuffle(seed=seed)
 
 
 def setup_drawbench_dataset(seed: int) -> Tuple[Dataset, Dataset, Dataset]:
@@ -196,7 +224,8 @@ def setup_parti_prompts_dataset(
     test_sample_size = define_sample_size_for_dataset(ds, fraction, test_sample_size)
     ds = ds.select(range(min(test_sample_size, len(ds))))
     ds = ds.rename_column("Prompt", "text")
-    return _prepare_test_only_prompt_dataset(ds, seed, "PartiPrompts")
+    pruna_logger.info("PartiPrompts is a test-only dataset. Do not use it for training or validation.")
+    return ds.select([0]), ds.select([0]), ds
 
 
 def _generate_geneval_question(entry: dict) -> list[str]:
@@ -281,7 +310,8 @@ def setup_geneval_dataset(
     ds = Dataset.from_list(records)
     test_sample_size = define_sample_size_for_dataset(ds, fraction, test_sample_size)
     ds = ds.select(range(min(test_sample_size, len(ds))))
-    return _prepare_test_only_prompt_dataset(ds, seed, "GenEval")
+    pruna_logger.info("GenEval is a test-only dataset. Do not use it for training or validation.")
+    return ds.select([0]), ds.select([0]), ds
 
 
 def setup_hps_dataset(
@@ -333,7 +363,8 @@ def setup_hps_dataset(
     ds = Dataset.from_list(all_prompts)
     test_sample_size = define_sample_size_for_dataset(ds, fraction, test_sample_size)
     ds = ds.select(range(min(test_sample_size, len(ds))))
-    return _prepare_test_only_prompt_dataset(ds, seed, "HPS")
+    pruna_logger.info("HPS is a test-only dataset. Do not use it for training or validation.")
+    return ds.select([0]), ds.select([0]), ds
 
 
 def setup_long_text_bench_dataset(
@@ -368,7 +399,8 @@ def setup_long_text_bench_dataset(
     ds = ds.rename_column("prompt", "text")
     test_sample_size = define_sample_size_for_dataset(ds, fraction, test_sample_size)
     ds = ds.select(range(min(test_sample_size, len(ds))))
-    return _prepare_test_only_prompt_dataset(ds, seed, "LongTextBench")
+    pruna_logger.info("LongTextBench is a test-only dataset. Do not use it for training or validation.")
+    return ds.select([0]), ds.select([0]), ds
 
 
 def setup_genai_bench_dataset(seed: int) -> Tuple[Dataset, Dataset, Dataset]:
@@ -430,17 +462,12 @@ def setup_imgedit_dataset(
 
     instructions_url = "https://raw.githubusercontent.com/PKU-YuanGroup/ImgEdit/b3eb8e74d7cd1fd0ce5341eaf9254744a8ab4c0b/Benchmark/Basic/basic_edit.json"
     judge_prompts_url = "https://raw.githubusercontent.com/PKU-YuanGroup/ImgEdit/c14480ac5e7b622e08cd8c46f96624a48eb9ab46/Benchmark/Basic/prompts.json"
-
-    resp_inst = requests.get(instructions_url)
-    resp_judge = requests.get(judge_prompts_url)
-    instructions: dict = {}
-    if resp_inst.status_code == 200:
-        with contextlib.suppress(json.JSONDecodeError):
-            instructions = json.loads(resp_inst.text)
-    judge_prompts: dict = {}
-    if resp_judge.status_code == 200:
-        with contextlib.suppress(json.JSONDecodeError):
-            judge_prompts = json.loads(resp_judge.text)
+    response_instructions = requests.get(instructions_url)
+    response_judge_prompts = requests.get(judge_prompts_url)
+    response_instructions.raise_for_status()
+    response_judge_prompts.raise_for_status()
+    instructions: dict = json.loads(response_instructions.text)
+    judge_prompts: dict = json.loads(response_judge_prompts.text)
 
     categories = [category] if category is not None and not isinstance(category, list) else category
     records = []
@@ -466,118 +493,8 @@ def setup_imgedit_dataset(
     if len(ds) == 0:
         raise ValueError(f"No samples found for category '{category}'.")
 
-    return _prepare_test_only_prompt_dataset(ds, seed, "ImgEdit")
-
-
-def _load_oneig_text_rendering(seed: int, class_filter: str | None = None) -> Dataset:
-    """Load OneIG text rendering data from HuggingFace dataset."""
-    ds = load_dataset("OneIG-Bench/OneIG-Bench", "OneIG-Bench")["train"]  # type: ignore[index]
-    ds = ds.filter(lambda x: x.get("category", "") in ("Text_Rendering", "Text Rendering"))
-
-    def to_record(row: dict) -> dict:
-        prompt = row.get("prompt_en", row.get("prompt", ""))
-        row_class = row.get("class", "None") or "None"
-        return {
-            "text": prompt,
-            "subset": "Text_Rendering",
-            "text_content": row_class if row_class != "None" else "",
-            "category": row.get("category"),
-            "class": row_class,
-            "questions": [],
-            "dependencies": [],
-        }
-
-    records = []
-    for row in ds:
-        row_dict = dict(row)
-        if class_filter is not None and (row_dict.get("class") or "None") != class_filter:
-            continue
-        records.append(to_record(row_dict))
-
-    return Dataset.from_list(records).shuffle(seed=seed)
-
-
-def _load_oneig_alignment(seed: int, category: str | None = None, class_filter: str | None = None) -> Dataset:
-    """Load OneIG alignment data from HuggingFace + GitHub JSON."""
-    import json
-
-    import requests
-
-    ds = load_dataset("OneIG-Bench/OneIG-Bench", "OneIG-Bench")["train"]  # type: ignore[index]
-
-    questions_by_id: dict[str, dict] = {}
-    url = "https://raw.githubusercontent.com/OneIG-Bench/OneIG-Benchmark/main/benchmark/alignment_questions.json"
-    response = requests.get(url)
-    if response.status_code == 200:
-        try:
-            questions_data = json.loads(response.text)
-            questions_by_id = {q["id"]: q for q in questions_data}
-        except json.JSONDecodeError:
-            pass
-
-    exclude = {"Knowledge_Reasoning", "Multilingualism", "Text_Rendering"}
-    alignment_cats = frozenset(get_args(ONEIG_DATASET_CATEGORIES)) - exclude
-    records = []
-    for row in ds:
-        row_id = row.get("id", "")
-        row_category = row.get("category", "")
-        row_class = row.get("class", "None") or "None"
-
-        if row_category not in alignment_cats:
-            continue
-        if category is not None and row_category != category:
-            continue
-        if class_filter is not None and row_class != class_filter:
-            continue
-
-        q_info = questions_by_id.get(row_id, {})
-        records.append(
-            {
-                "text": row.get("prompt_en", row.get("prompt", "")),
-                "subset": row_category,
-                "text_content": row_class if row_class != "None" else None,
-                "category": row_category,
-                "class": row_class,
-                "questions": q_info.get("questions", []),
-                "dependencies": q_info.get("dependencies", []),
-            }
-        )
-
-    return Dataset.from_list(records).shuffle(seed=seed)
-
-
-def _load_oneig_generic(
-    seed: int,
-    category_filter: str | None = None,
-    class_filter: str | None = None,
-    config: str = "OneIG-Bench",
-) -> Dataset:
-    """Load OneIG data for Knowledge_Reasoning, Multilingualism, or any category without alignment questions."""
-    ds = load_dataset("OneIG-Bench/OneIG-Bench", config)["train"]  # type: ignore[index]
-
-    records = []
-    for row in ds:
-        row_category = row.get("category", "")
-        row_class = row.get("class", "None") or "None"
-
-        if category_filter is not None and row_category != category_filter:
-            continue
-        if class_filter is not None and row_class != class_filter:
-            continue
-
-        records.append(
-            {
-                "text": row.get("prompt_en", row.get("prompt", "")),
-                "subset": row_category,
-                "text_content": row_class if row_class != "None" else None,
-                "category": row_category,
-                "class": row_class,
-                "questions": [],
-                "dependencies": [],
-            }
-        )
-
-    return Dataset.from_list(records).shuffle(seed=seed)
+    pruna_logger.info("ImgEdit is a test-only dataset. Do not use it for training or validation.")
+    return ds.select([0]), ds.select([0]), ds
 
 
 def setup_oneig_dataset(
@@ -611,48 +528,12 @@ def setup_oneig_dataset(
     Tuple[Dataset, Dataset, Dataset]
         The OneIG dataset (dummy train, dummy val, test).
     """
-    from datasets import concatenate_datasets
+    ds = _load_oneig_all(seed)
 
-    categories = [category] if category is not None and not isinstance(category, list) else category
-    single_filter = categories[0] if categories and len(categories) == 1 else None
-    multi_filter = categories if categories and len(categories) > 1 else None
-
-    alignment_categories = {"Anime_Stylization", "Portrait", "General_Object"}
-
-    category_filter: str | None = None
-    class_filter: str | None = None
-
-    if single_filter in get_args(ONEIG_DATASET_CATEGORIES):
-        category_filter = single_filter
-    elif single_filter is not None:
-        class_filter = single_filter
-
-    load_text = single_filter is None or category_filter == "Text_Rendering" or class_filter
-    load_align = single_filter is None or category_filter in alignment_categories or class_filter
-    load_kr = single_filter is None or category_filter == "Knowledge_Reasoning"
-    load_multi = single_filter is None or category_filter == "Multilingualism"
-
-    datasets_to_concat = []
-    if load_text:
-        datasets_to_concat.append(_load_oneig_text_rendering(seed, class_filter or None))
-
-    if load_align:
-        align_cat = category_filter if category_filter in alignment_categories else None
-        datasets_to_concat.append(_load_oneig_alignment(seed, category=align_cat, class_filter=class_filter or None))
-
-    if load_kr:
-        datasets_to_concat.append(_load_oneig_generic(seed, category_filter="Knowledge_Reasoning"))
-
-    if load_multi:
-        datasets_to_concat.append(_load_oneig_generic(seed, category_filter="Multilingualism", config="OneIG-Bench-ZH"))
-
-    ds = concatenate_datasets(datasets_to_concat) if len(datasets_to_concat) > 1 else datasets_to_concat[0]
-
-    if multi_filter:
+    if category is not None:
+        categories = [category] if not isinstance(category, list) else category
         ds = ds.filter(
-            lambda x: (
-                x.get("category") in multi_filter or x.get("class") in multi_filter or x.get("subset") in multi_filter
-            )
+            lambda x: (x.get("category") in categories or x.get("class") in categories or x.get("subset") in categories)
         )
 
     test_sample_size = define_sample_size_for_dataset(ds, fraction, test_sample_size)
@@ -661,7 +542,8 @@ def setup_oneig_dataset(
     if len(ds) == 0:
         raise ValueError(f"No samples found for category '{category}'. Check that the category exists and has data.")
 
-    return _prepare_test_only_prompt_dataset(ds, seed, "OneIG")
+    pruna_logger.info("OneIG is a test-only dataset. Do not use it for training or validation.")
+    return ds.select([0]), ds.select([0]), ds
 
 
 def setup_gedit_dataset(
@@ -728,7 +610,8 @@ def setup_gedit_dataset(
     if len(ds) == 0:
         raise ValueError(f"No samples found for category '{category}'.")
 
-    return _prepare_test_only_prompt_dataset(ds, seed, "GEditBench")
+    pruna_logger.info("GEditBench is a test-only dataset. Do not use it for training or validation.")
+    return ds.select([0]), ds.select([0]), ds
 
 
 def setup_dpg_dataset(
@@ -789,4 +672,5 @@ def setup_dpg_dataset(
     ds = Dataset.from_list(records)
     test_sample_size = define_sample_size_for_dataset(ds, fraction, test_sample_size)
     ds = ds.select(range(min(test_sample_size, len(ds))))
-    return _prepare_test_only_prompt_dataset(ds, seed, "DPG")
+    pruna_logger.info("DPG is a test-only dataset. Do not use it for training or validation.")
+    return ds.select([0]), ds.select([0]), ds
