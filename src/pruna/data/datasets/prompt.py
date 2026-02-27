@@ -81,6 +81,8 @@ OneIGCategory = Literal[
     "vivid warm",
     "watercolor",
 ]
+ONEIG_DATASET_CATEGORIES = frozenset(get_args(OneIGCategory)[:6])
+
 PartiCategory = Literal[
     "Abstract",
     "Animals",
@@ -137,28 +139,6 @@ def _to_oneig_record(row: dict, questions_by_id: dict[str, dict]) -> dict:
         "questions": q_info.get("questions", []),
         "dependencies": q_info.get("dependencies", []),
     }
-
-
-def _load_oneig_all(seed: int) -> Dataset:
-    """Load full OneIG dataset from HuggingFace and GitHub."""
-    import json
-
-    import requests
-    from datasets import concatenate_datasets
-
-    resp = requests.get(
-        "https://raw.githubusercontent.com/OneIG-Bench/OneIG-Benchmark/main/benchmark/alignment_questions.json"
-    )
-    resp.raise_for_status()
-    questions_by_id = {q["id"]: q for q in json.loads(resp.text)}
-
-    ds_main = load_dataset("OneIG-Bench/OneIG-Bench", "OneIG-Bench")["train"]  # type: ignore[index]
-    ds_zh = load_dataset("OneIG-Bench/OneIG-Bench", "OneIG-Bench-ZH")["train"]  # type: ignore[index]
-    ds = concatenate_datasets([ds_main, ds_zh])
-
-    records = [_to_oneig_record(dict(row), questions_by_id) for row in ds]
-
-    return Dataset.from_list(records).shuffle(seed=seed)
 
 
 def setup_drawbench_dataset(seed: int) -> Tuple[Dataset, Dataset, Dataset]:
@@ -528,9 +508,23 @@ def setup_oneig_dataset(
     Tuple[Dataset, Dataset, Dataset]
         The OneIG dataset (dummy train, dummy val, test).
     """
-    ds = _load_oneig_all(seed)
+    import json
 
-    if category is not None:
+    import requests
+
+    resp = requests.get(
+        "https://raw.githubusercontent.com/OneIG-Bench/OneIG-Benchmark/main/benchmark/alignment_questions.json"
+    )
+    resp.raise_for_status()
+    questions_by_id = {q["id"]: q for q in json.loads(resp.text)}
+
+    ds_raw = load_dataset("OneIG-Bench/OneIG-Bench", "OneIG-Bench")["train"]  # type: ignore[index]
+    records = [_to_oneig_record(dict(row), questions_by_id) for row in ds_raw]
+    ds = Dataset.from_list(records).shuffle(seed=seed)
+
+    if category is None:
+        pass
+    else:
         categories = [category] if not isinstance(category, list) else category
         ds = ds.filter(
             lambda x: (x.get("category") in categories or x.get("class") in categories or x.get("subset") in categories)
