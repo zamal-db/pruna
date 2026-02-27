@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import inspect
 import random
-from typing import Any, Callable, Literal, Tuple, Union, get_args, get_origin
+from typing import Any, Callable, Literal, Tuple, Union, get_args, get_origin, get_type_hints
 
 import torch
 from datasets import Dataset
@@ -62,6 +62,12 @@ def get_literal_values_from_param(func: Callable[..., Any], param_name: str) -> 
     ann = sig.parameters[param_name].annotation
     if ann is inspect.Parameter.empty:
         return None
+    if isinstance(ann, str):
+        try:
+            hints = get_type_hints(unwrapped)
+            ann = hints.get(param_name, ann)
+        except Exception:
+            return None
 
     def extract(ann: Any) -> list[str] | None:
         if ann is None or ann is type(None):

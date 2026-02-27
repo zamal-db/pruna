@@ -21,7 +21,6 @@ from pruna.logging.logger import pruna_logger
 
 GenEvalCategory = Literal["single_object", "two_object", "counting", "colors", "position", "color_attr"]
 HPSCategory = Literal["anime", "concept-art", "paintings", "photo"]
-
 OneIGCategory = Literal[
     "Anime_Stylization",
     "General_Object",
@@ -82,7 +81,6 @@ OneIGCategory = Literal[
     "vivid warm",
     "watercolor",
 ]
-
 PartiCategory = Literal[
     "Abstract",
     "Animals",
@@ -108,6 +106,21 @@ PartiCategory = Literal[
     "Style & Format",
     "Writing & Symbols",
 ]
+ImgEditCategory = Literal["replace", "add", "remove", "adjust", "extract", "style", "background", "compose"]
+GEditBenchCategory = Literal[
+    "background_change",
+    "color_alter",
+    "material_alter",
+    "motion_change",
+    "ps_human",
+    "style_change",
+    "subject_add",
+    "subject_remove",
+    "subject_replace",
+    "text_change",
+    "tone_transfer",
+]
+DPGCategory = Literal["entity", "attribute", "relation", "global", "other"]
 
 
 def setup_drawbench_dataset(seed: int) -> Tuple[Dataset, Dataset, Dataset]:
@@ -366,9 +379,6 @@ def setup_genai_bench_dataset(seed: int) -> Tuple[Dataset, Dataset, Dataset]:
     ds = ds.rename_column("Prompt", "text")
     pruna_logger.info("GenAI-Bench is a test-only dataset. Do not use it for training or validation.")
     return ds.select([0]), ds.select([0]), ds
-
-
-ImgEditCategory = Literal["replace", "add", "remove", "adjust", "extract", "style", "background", "compose"]
 
 
 def setup_imgedit_dataset(
@@ -640,90 +650,6 @@ def setup_oneig_dataset(
     return _prepare_test_only_prompt_dataset(ds, seed, "OneIG")
 
 
-def setup_oneig_text_rendering_dataset(
-    seed: int,
-    fraction: float = 1.0,
-    train_sample_size: int | None = None,
-    test_sample_size: int | None = None,
-) -> Tuple[Dataset, Dataset, Dataset]:
-    """
-    Setup OneIG Text Rendering benchmark (subset of OneIG).
-
-    License: Apache 2.0
-
-    Parameters
-    ----------
-    seed : int
-        The seed to use.
-    fraction : float
-        The fraction of the dataset to use.
-    train_sample_size : int | None
-        Unused; train/val are dummy.
-    test_sample_size : int | None
-        The sample size to use for the test dataset.
-
-    Returns
-    -------
-    Tuple[Dataset, Dataset, Dataset]
-        The OneIG Text Rendering dataset (dummy train, dummy val, test).
-    """
-    ds = _load_oneig_text_rendering(seed, None)
-    n = define_sample_size_for_dataset(ds, fraction, test_sample_size)
-    ds = ds.select(range(min(n, len(ds))))
-    return _prepare_test_only_prompt_dataset(ds, seed, "OneIGTextRendering")
-
-
-def setup_oneig_alignment_dataset(
-    seed: int,
-    fraction: float = 1.0,
-    train_sample_size: int | None = None,
-    test_sample_size: int | None = None,
-    category: str | None = None,
-) -> Tuple[Dataset, Dataset, Dataset]:
-    """
-    Setup OneIG Alignment benchmark (subset of OneIG).
-
-    License: Apache 2.0
-
-    Parameters
-    ----------
-    seed : int
-        The seed to use.
-    fraction : float
-        The fraction of the dataset to use.
-    train_sample_size : int | None
-        Unused; train/val are dummy.
-    test_sample_size : int | None
-        The sample size to use for the test dataset.
-    category : str | None
-        Filter by category. Available: Anime_Stylization, Portrait, General_Object.
-
-    Returns
-    -------
-    Tuple[Dataset, Dataset, Dataset]
-        The OneIG Alignment dataset (dummy train, dummy val, test).
-    """
-    ds = _load_oneig_alignment(seed, category=category, class_filter=None)
-    n = define_sample_size_for_dataset(ds, fraction, test_sample_size)
-    ds = ds.select(range(min(n, len(ds))))
-    return _prepare_test_only_prompt_dataset(ds, seed, "OneIGAlignment")
-
-
-GEditBenchCategory = Literal[
-    "background_change",
-    "color_alter",
-    "material_alter",
-    "motion_change",
-    "ps_human",
-    "style_change",
-    "subject_add",
-    "subject_remove",
-    "subject_replace",
-    "text_change",
-    "tone_transfer",
-]
-
-
 def setup_gedit_dataset(
     seed: int,
     fraction: float = 1.0,
@@ -789,9 +715,6 @@ def setup_gedit_dataset(
         raise ValueError(f"No samples found for category '{category}'.")
 
     return _prepare_test_only_prompt_dataset(ds, seed, "GEditBench")
-
-
-DPGCategory = Literal["entity", "attribute", "relation", "global", "other"]
 
 
 def setup_dpg_dataset(

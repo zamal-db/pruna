@@ -4,7 +4,8 @@ import pytest
 import torch
 from transformers import AutoTokenizer
 
-from pruna.data import BENCHMARK_CATEGORY_CONFIG, base_datasets
+from pruna.data import base_datasets
+from pruna.data.utils import get_literal_values_from_param
 from pruna.data.datasets.image import setup_imagenet_dataset
 from pruna.data.pruna_datamodule import PrunaDataModule
 
@@ -51,8 +52,6 @@ def iterate_dataloaders(datamodule: PrunaDataModule) -> None:
         pytest.param("LongTextBench", dict(), marks=pytest.mark.slow),
         pytest.param("GEditBench", dict(), marks=pytest.mark.slow),
         pytest.param("OneIG", dict(), marks=pytest.mark.slow),
-        pytest.param("OneIGTextRendering", dict(), marks=pytest.mark.slow),
-        pytest.param("OneIGAlignment", dict(), marks=pytest.mark.slow),
         pytest.param("DPG", dict(), marks=pytest.mark.slow),
     ],
 )
@@ -90,12 +89,20 @@ def test_dm_from_dataset(setup_fn: Callable, collate_fn: Callable, collate_fn_ar
     iterate_dataloaders(datamodule)
 
 
+def _benchmarks_with_category() -> list[tuple[str, str]]:
+    """Benchmarks that have a category param with Literal, using first value as default."""
+    result = []
+    for name in base_datasets:
+        setup_fn = base_datasets[name][0]
+        literal_values = get_literal_values_from_param(setup_fn, "category")
+        if literal_values:
+            result.append((name, literal_values[0]))
+    return result
+
+
 @pytest.mark.cpu
 @pytest.mark.slow
-@pytest.mark.parametrize(
-    "dataset_name, category",
-    [(name, cat) for name, (cat, _) in BENCHMARK_CATEGORY_CONFIG.items() if name in base_datasets],
-)
+@pytest.mark.parametrize("dataset_name, category", _benchmarks_with_category())
 def test_benchmark_category_filter(dataset_name: str, category: str) -> None:
     """Test dataset loading with category filter."""
     dm = PrunaDataModule.from_string(
@@ -107,8 +114,16 @@ def test_benchmark_category_filter(dataset_name: str, category: str) -> None:
 
     assert len(prompts) == 4
     assert all(isinstance(p, str) for p in prompts)
-    _, aux_keys = BENCHMARK_CATEGORY_CONFIG[dataset_name]
-    assert all(any(aux.get(k) == category for k in aux_keys) for aux in auxiliaries)
+
+    def _category_in_aux(aux: dict, cat: str) -> bool:
+        for v in aux.values():
+            if v == cat:
+                return True
+            if isinstance(v, (list, tuple)) and cat in v:
+                return True
+        return False
+
+    assert all(_category_in_aux(aux, category) for aux in auxiliaries)
 
 
 @pytest.mark.cpu
@@ -117,7 +132,7 @@ def test_benchmark_category_filter(dataset_name: str, category: str) -> None:
     "dataset_name, required_aux_key",
     [
         ("LongTextBench", "text_content"),
-        ("OneIGTextRendering", "text_content"),
+        ("OneIG", "text_content"),
     ],
 )
 def test_prompt_benchmark_auxiliaries(dataset_name: str, required_aux_key: str) -> None:

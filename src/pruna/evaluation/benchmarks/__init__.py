@@ -34,15 +34,18 @@ class Benchmark:
         List of metric names used for evaluation.
     task_type : str
         Type of task the benchmark evaluates (e.g., 'text_to_image').
-    subsets : list[str]
-        Optional list of benchmark subset names.
+    category : str | None
+        Default category derived from setup function's Literal (first value).
+    categories : list[str]
+        Valid category values derived from the setup function's Literal type.
     """
 
     name: str
     description: str
     metrics: list[str]
     task_type: str
-    subsets: list[str] = field(default_factory=list)
+    category: str | None = None
+    categories: list[str] = field(default_factory=list)
 
     @property
     def lookup_key(self) -> str:
@@ -50,11 +53,12 @@ class Benchmark:
         return self.name.replace(" ", "")
 
     def __post_init__(self) -> None:
-        """Populate subsets from setup function's Literal when a matching lookup key exists."""
+        """Populate category and categories from setup function's Literal."""
         if self.lookup_key in base_datasets:
             setup_fn = base_datasets[self.lookup_key][0]
             literal_values = get_literal_values_from_param(setup_fn, "category")
-            self.subsets = literal_values if literal_values is not None else []
+            self.categories = literal_values if literal_values is not None else []
+            self.category = self.categories[0] if self.categories else None
 
 
 class BenchmarkRegistry:

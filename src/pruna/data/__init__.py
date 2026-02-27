@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from functools import partial
 from typing import Any, Callable, Tuple
 
@@ -35,9 +35,7 @@ from pruna.data.datasets.prompt import (
     setup_hps_dataset,
     setup_imgedit_dataset,
     setup_long_text_bench_dataset,
-    setup_oneig_alignment_dataset,
     setup_oneig_dataset,
-    setup_oneig_text_rendering_dataset,
     setup_parti_prompts_dataset,
 )
 from pruna.data.datasets.question_answering import setup_polyglot_dataset
@@ -57,17 +55,6 @@ from pruna.data.datasets.text_to_image import (
     setup_open_image_dataset,
 )
 from pruna.data.datasets.text_to_video import setup_vbench_dataset
-
-BENCHMARK_CATEGORY_CONFIG: dict[str, tuple[str, list[str]]] = {
-    "PartiPrompts": ("Animals", ["Category", "Challenge"]),
-    "GenEval": ("counting", ["tag"]),
-    "HPS": ("anime", ["category"]),
-    "ImgEdit": ("replace", ["category"]),
-    "GEditBench": ("background_change", ["category"]),
-    "OneIG": ("Text_Rendering", ["subset", "category"]),
-    "DPG": ("entity", ["category_broad"]),
-    "OneIGAlignment": ("Portrait", ["category"]),
-}
 
 base_datasets: dict[str, Tuple[Callable, str, dict[str, Any]]] = {
     "COCO": (setup_coco_dataset, "image_generation_collate", {"img_size": 512}),
@@ -130,8 +117,6 @@ base_datasets: dict[str, Tuple[Callable, str, dict[str, Any]]] = {
     "LongTextBench": (setup_long_text_bench_dataset, "prompt_with_auxiliaries_collate", {}),
     "GEditBench": (setup_gedit_dataset, "prompt_with_auxiliaries_collate", {}),
     "OneIG": (setup_oneig_dataset, "prompt_with_auxiliaries_collate", {}),
-    "OneIGTextRendering": (setup_oneig_text_rendering_dataset, "prompt_with_auxiliaries_collate", {}),
-    "OneIGAlignment": (setup_oneig_alignment_dataset, "prompt_with_auxiliaries_collate", {}),
     "DPG": (setup_dpg_dataset, "prompt_with_auxiliaries_collate", {}),
     "TinyIMDB": (setup_tiny_imdb_dataset, "text_generation_collate", {}),
     "VBench": (setup_vbench_dataset, "prompt_with_auxiliaries_collate", {}),
@@ -139,7 +124,7 @@ base_datasets: dict[str, Tuple[Callable, str, dict[str, Any]]] = {
 
 
 @dataclass
-class BenchmarkInfo:
+class Benchmark:
     """
     Metadata for a benchmark dataset.
 
@@ -155,8 +140,6 @@ class BenchmarkInfo:
         List of metric names used for evaluation.
     task_type : str
         Type of task the benchmark evaluates (e.g., 'text_to_image').
-    subsets : list[str]
-        Optional list of benchmark subset names.
     """
 
     name: str
@@ -164,11 +147,10 @@ class BenchmarkInfo:
     description: str
     metrics: list[str]
     task_type: str
-    subsets: list[str] = field(default_factory=list)
 
 
-benchmark_info: dict[str, BenchmarkInfo] = {
-    "PartiPrompts": BenchmarkInfo(
+benchmark_info: dict[str, Benchmark] = {
+    "PartiPrompts": Benchmark(
         name="parti_prompts",
         display_name="Parti Prompts",
         description=(
@@ -178,33 +160,8 @@ benchmark_info: dict[str, BenchmarkInfo] = {
         ),
         metrics=["arniqa", "clip_score", "clipiqa", "sharpness"],
         task_type="text_to_image",
-        subsets=[
-            "Abstract",
-            "Animals",
-            "Artifacts",
-            "Arts",
-            "Food & Beverage",
-            "Illustrations",
-            "Indoor Scenes",
-            "Outdoor Scenes",
-            "People",
-            "Produce & Plants",
-            "Vehicles",
-            "World Knowledge",
-            "Basic",
-            "Complex",
-            "Fine-grained Detail",
-            "Imagination",
-            "Linguistic Structures",
-            "Perspective",
-            "Properties & Positioning",
-            "Quantity",
-            "Simple Detail",
-            "Style & Format",
-            "Writing & Symbols",
-        ],
     ),
-    "DrawBench": BenchmarkInfo(
+    "DrawBench": Benchmark(
         name="drawbench",
         display_name="DrawBench",
         description="A comprehensive benchmark for evaluating text-to-image generation models.",
@@ -216,7 +173,7 @@ benchmark_info: dict[str, BenchmarkInfo] = {
         ],
         task_type="text_to_image",
     ),
-    "GenAIBench": BenchmarkInfo(
+    "GenAIBench": Benchmark(
         name="genai_bench",
         display_name="GenAI Bench",
         description="A benchmark for evaluating generative AI models.",
@@ -228,14 +185,14 @@ benchmark_info: dict[str, BenchmarkInfo] = {
         ],
         task_type="text_to_image",
     ),
-    "VBench": BenchmarkInfo(
+    "VBench": Benchmark(
         name="vbench",
         display_name="VBench",
         description="A benchmark for evaluating video generation models.",
         metrics=["clip_score"],
         task_type="text_to_video",
     ),
-    "GenEval": BenchmarkInfo(
+    "GenEval": Benchmark(
         name="geneval",
         display_name="GenEval",
         description=(
@@ -246,9 +203,8 @@ benchmark_info: dict[str, BenchmarkInfo] = {
             # "qa_accuracy" not supported in Pruna
         ],
         task_type="text_to_image",
-        subsets=["single_object", "two_object", "counting", "colors", "position", "color_attr"],
     ),
-    "HPS": BenchmarkInfo(
+    "HPS": Benchmark(
         name="hps",
         display_name="HPS",
         description=(
@@ -259,9 +215,8 @@ benchmark_info: dict[str, BenchmarkInfo] = {
             # "hps" not supported in Pruna
         ],
         task_type="text_to_image",
-        subsets=["anime", "concept-art", "paintings", "photo"],
     ),
-    "LongTextBench": BenchmarkInfo(
+    "LongTextBench": Benchmark(
         name="long_text_bench",
         display_name="Long Text Bench",
         description=(
@@ -274,7 +229,7 @@ benchmark_info: dict[str, BenchmarkInfo] = {
         ],
         task_type="text_to_image",
     ),
-    "ImgEdit": BenchmarkInfo(
+    "ImgEdit": Benchmark(
         name="imgedit",
         display_name="ImgEdit",
         description="Image editing benchmark with 8 edit types for evaluating editing capabilities.",
@@ -282,9 +237,8 @@ benchmark_info: dict[str, BenchmarkInfo] = {
             # "img_edit_score" not supported in Pruna
         ],
         task_type="image_edit",
-        subsets=["replace", "add", "remove", "adjust", "extract", "style", "background", "compose"],
     ),
-    "GEditBench": BenchmarkInfo(
+    "GEditBench": Benchmark(
         name="gedit_bench",
         display_name="GEdit Bench",
         description="Image editing benchmark with 11 task types for evaluating fine-grained editing capabilities.",
@@ -292,60 +246,21 @@ benchmark_info: dict[str, BenchmarkInfo] = {
             # "viescore" not supported in Pruna
         ],
         task_type="image_edit",
-        subsets=[
-            "background_change",
-            "color_alter",
-            "material_alter",
-            "motion_change",
-            "ps_human",
-            "style_change",
-            "subject_add",
-            "subject_remove",
-            "subject_replace",
-            "text_change",
-            "tone_transfer",
-        ],
     ),
-    "OneIG": BenchmarkInfo(
+    "OneIG": Benchmark(
         name="oneig",
         display_name="OneIG",
         description=(
             "Comprehensive benchmark for text rendering and image-text alignment "
-            "evaluation across anime, portrait, and object generation."
+            "evaluation across anime, portrait, and object generation. Categories: "
+            "Text_Rendering, Anime_Stylization, Portrait, General_Object, Knowledge_Reasoning, Multilingualism."
         ),
         metrics=[
             # "alignment_score", "text_score" not supported in Pruna
         ],
         task_type="text_to_image",
-        subsets=[
-            "Text_Rendering",
-            "Anime_Stylization",
-            "Portrait",
-            "General_Object",
-            "Knowledge_Reasoning",
-            "Multilingualism",
-        ],
     ),
-    "OneIGTextRendering": BenchmarkInfo(
-        name="oneig_text_rendering",
-        display_name="OneIG Text Rendering",
-        description="Evaluates text rendering quality in generated images using OCR-based metrics.",
-        metrics=[
-            # "text_score" not supported in Pruna
-        ],
-        task_type="text_to_image",
-    ),
-    "OneIGAlignment": BenchmarkInfo(
-        name="oneig_alignment",
-        display_name="OneIG Alignment",
-        description="Evaluates image-text alignment for anime, human, and object generation with VQA-based questions.",
-        metrics=[
-            # "alignment_score" not supported in Pruna
-        ],
-        task_type="text_to_image",
-        subsets=["Anime_Stylization", "Portrait", "General_Object"],
-    ),
-    "DPG": BenchmarkInfo(
+    "DPG": Benchmark(
         name="dpg",
         display_name="DPG",
         description=(
@@ -356,23 +271,22 @@ benchmark_info: dict[str, BenchmarkInfo] = {
             # "qa_accuracy" not supported in Pruna
         ],
         task_type="text_to_image",
-        subsets=["entity", "attribute", "relation", "global", "other"],
     ),
-    "COCO": BenchmarkInfo(
+    "COCO": Benchmark(
         name="coco",
         display_name="COCO",
         description="Microsoft COCO dataset for image generation evaluation with real image-caption pairs.",
         metrics=["fid", "clip_score", "clipiqa"],
         task_type="text_to_image",
     ),
-    "ImageNet": BenchmarkInfo(
+    "ImageNet": Benchmark(
         name="imagenet",
         display_name="ImageNet",
         description="Large-scale image classification benchmark with 1000 classes.",
         metrics=["accuracy"],
         task_type="image_classification",
     ),
-    "WikiText": BenchmarkInfo(
+    "WikiText": Benchmark(
         name="wikitext",
         display_name="WikiText",
         description="Language modeling benchmark based on Wikipedia articles.",
